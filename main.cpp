@@ -1,8 +1,12 @@
 #include <iostream>
 #include <stdio.h>
+#include <queue>
+#include <set>
 using namespace std;
 
-#define  ll long long
+#define ll long long
+#define mp make_pair
+#define pii pair<int, int>
 
 int read() {
     int f = 1;
@@ -20,164 +24,117 @@ int read() {
 }
 
 const int N = 100010;
-const int bi = 18;
-ll INF = 1LL << 60;
-int n, m;
-int mod = 1000000007;
-ll dp[N][2];
-int f[N];
-ll diff[N][2];
-int head[N], point[N * 2], nxt[N * 2];
-ll value[N];
-ll ct[N][bi][2][2];
-int cur;
-int depth[N];
+const int M = 200010;
+int INF = 1 << 29;
+int n, m, K;
+int mod;
+int head1[N], headn[N], start[M<<1], point[M<<1], nxt[M<<1], value[M<<1];
+int tot;
 
+int ct[N << 1];
+int seg = 0;
+int dist1[N], distn[N];
+ll f[N][55];
+bool in[N][55];
+
+void initSeg() {
+    memset(ct, 0, sizeof(ct));
+    seg = 1;
+    while (seg <= n) seg *= 2;
+    seg--;
+    ct[0] = N - 1;
+}
+
+void adjust(int x, int y) {
+    x += seg;
+    ct[x] = y;
+    for (; distn[ct[x>>1]] > distn[ct[x]]; x>>=1) ct[x>>1] = y;
+}
+int comp(int x, int y) {
+    return distn[x] < distn[y] ? x: y;
+}
+void remove(int x) {
+    x += seg;
+    ct[x] = 0;
+    for (;x;x>>=1) {
+        ct[x >> 1] = comp(ct[x] , ct[x^1]);
+    }
+}
+
+void init() {
+    initSeg();
+    for (int i = 0; i <= n; i++) {
+        distn[i] = INF;
+        head1[i] = 0;
+        headn[i] = 0;
+    }
+}
 
 bool contain(int set, int i);
 
-void addEdge(int u, int v) {
-    point[++cur] = v;
-    nxt[cur] = head[u];
-    head[u] = cur;
+void addEdge(int u, int v, int va, int* head) {
+    point[++tot] = v;
+    start[tot] = u;
+    nxt[tot] = head[u];
+    head[u] = tot;
+    value[tot] = va;
 }
 
-void swap(int& a, int& b) {
-    int t = a;
-    a = b;
-    b = t;
+void dij() {
+    distn[n] = 0;
+    adjust(n, n);
+    while (ct[1]) {
+        int u = ct[1];
+        for (int e = headn[u]; e; e = nxt[e]) {
+            int v = point[e];
+            int va = value[e];
+            if (distn[u] + va < distn[v]) {
+                distn[v] = distn[u] + va;
+                adjust(v, v);
+            }
+        }
+        remove(u);
+    }
 }
 
-void dfs(int u, int dep, int fa) {
-    depth[u] = dep;
-    f[u] = fa;
-    ll sum1 = 0;
-    ll sumMin = 0;
-    for (int e = head[u]; e; e = nxt[e]) {
+ll dfs(int x, int y) {
+    if (in[x][y]) return -1;
+    if (f[x][y]) return f[x][y];
+    in[x][y] = true;
+    if (x == n) f[x][y] = 1;
+    for (int e = head1[x]; e; e= nxt[e]) {
         int v = point[e];
-        if (v == fa) continue;
-        dfs(v, dep + 1, u);
-        sum1 += dp[v][1];
-        sumMin += min(dp[v][0], dp[v][1]);
+        int va = value[e];
+        if (distn[v] + va <= distn[x] + y) {
+            ll tmp = dfs(v, distn[x] + y - distn[v] - va);
+            if (tmp == -1) return f[x][y] = tmp;
+            f[x][y] += tmp;
+        }
     }
-    dp[u][1] = value[u] + sumMin;
-    dp[u][0] = sum1;
+    in[x][y] = false;
+    return f[x][y];
 }
-
-void dfs2(int u, int fa) {
-    if (fa != 0) {
-        ct[u][0][0][0] = 1;
-    }
-
-    for (int i = 0; i < bi; i++) {
-
-    }
-}
-
 
 int main() {
-    string str;
-    cin>>n>>m>>str;
-    for (int i = 1; i <= n; i++) {
-        int v = read();
-        value[i] = v;
-    }
+    int T = read();
 
-    for (int i = 1; i < n; i++) {
-        int u = read();
-        int v = read();
-        addEdge(u, v);
-        addEdge(v, u);
-    }
-    for (int i = 0; i < N; i++) for (int j = 0; j < 18; j++) for (int k = 0; k < 2; k++){
-        ct[i][j][k][0] = 1;
-        ct[i][j][k][1] = 1;
-    }
-    dfs(1, 1, 0);
+    for (int t = 0; t < T; t++) {
+        n = read();
+        m = read();
+        K = read();
+        mod = read();
+        init();
 
-    for (int i = 0; i < m; i++) {
-        int a = read();
-        int av = read();
-        int b = read();
-        int bv = read();
-        if (depth[a] < depth[b]) {
-            swap(a, b);
-            swap(av, bv);
+        for (int i = 0; i < m; i++) {
+            int u = read();
+            int v = read();
+            int c = read();
+            addEdge(u, v, c, head1);
+            addEdge(v, u, c, headn);
         }
-        if (av == 0 && bv == 0) {
-            bool ok = true;
-            for (int e = head[a];e;e=nxt[e]) {
-                if (point[e] == b) {
-                    ok = false;
-                    break;
-                }
-            }
-            if (!ok) {
-                cout << -1 << endl;
-                continue;
-            }
-        }
-
-        if (av == 1) {
-            diff[a][0] = INF - value[a];
-            diff[a][1] = 0;
-        } else {
-            diff[a][1] = INF - value[a];
-            diff[a][0] = 0;
-        }
-        if (bv == 1) {
-            diff[b][0] = INF - value[b];
-            diff[b][1] = 0;
-        } else {
-            diff[b][1] = INF - value[b];
-            diff[b][0] = 0;
-        }
-
-        int k = depth[a] - depth[b];
-        int ca = a;
-        int cb = b;
-        for (int i = 0; i < k; i++) {
-            int fa = f[ca];
-            if (fa == cb) {
-                diff[fa][0] = diff[ca][1] + diff[cb][0];
-                diff[fa][1] = min(dp[ca][1] + diff[ca][1], dp[ca][0] + diff[ca][0]) - min(dp[ca][1], dp[ca][0]) + diff[cb][1];
-            } else {
-                diff[fa][0] = diff[ca][1];
-                diff[fa][1] = min(dp[ca][1] + diff[ca][1], dp[ca][0] + diff[ca][0]) - min(dp[ca][1], dp[ca][0]);
-            }
-            ca = fa;
-        }
-        while (ca != cb) {
-            int fa = f[ca];
-            int fb = f[cb];
-            if (fa == fb) {
-                diff[fa][0] = diff[ca][1] + diff[cb][1];
-                diff[fa][1] = min(dp[ca][1] + diff[ca][1], dp[ca][0] + diff[ca][0]) - min(dp[ca][1], dp[ca][0]) +
-                        min(dp[cb][1] + diff[cb][1], dp[cb][0] + diff[cb][0]) - min(dp[cb][1], dp[cb][0]);
-            } else {
-                diff[fa][0] = diff[ca][1];
-                diff[fa][1] = min(dp[ca][1] + diff[ca][1], dp[ca][0] + diff[ca][0]) - min(dp[ca][1], dp[ca][0]);
-
-                diff[fb][0] = diff[cb][1];
-                diff[fb][1] = min(dp[cb][1] + diff[cb][1], dp[cb][0] + diff[cb][0]) - min(dp[cb][1], dp[cb][0]);
-            }
-            ca = fa;
-            cb = fb;
-        }
-        while (f[ca] != 0) {
-            int fa = f[ca];
-            diff[fa][0] = diff[ca][1];
-            diff[fa][1] = min(dp[ca][1] + diff[ca][1], dp[ca][0] + diff[ca][0]) - min(dp[ca][1], dp[ca][0]);
-            ca = fa;
-        }
-
-        ll ans = min(dp[1][0] + diff[1][0], dp[1][1] + diff[1][1]);
-        if (b == 1) {
-            if (bv == 1) ans = dp[1][1] + diff[1][1];
-            if (bv == 0) ans = dp[1][0] + diff[1][0];
-        }
-        if (ans >= INF) ans = -1;
-        cout << ans << endl;
+        dij();
+        ll ans = dfs(1, K);
+        printf("%lld\n", ans);
     }
 
     return 0;
