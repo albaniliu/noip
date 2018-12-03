@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <queue>
 #include <set>
+#include <cstring>
 using namespace std;
 
 #define ll long long
@@ -31,7 +32,7 @@ int mod;
 int head1[N], headn[N], start[M<<1], point[M<<1], nxt[M<<1], value[M<<1];
 int tot;
 
-int ct[N << 1];
+int ct[N << 2];
 int seg = 0;
 int dist1[N], distn[N];
 ll f[N][55];
@@ -56,13 +57,16 @@ int comp(int x, int y) {
 void remove(int x) {
     x += seg;
     ct[x] = 0;
+    x >>= 1;
     for (;x;x>>=1) {
-        ct[x >> 1] = comp(ct[x] , ct[x^1]);
+        ct[x] = comp(ct[x<<1] , ct[x << 1 |1]);
     }
 }
 
 void init() {
     initSeg();
+    memset(f, 0, sizeof(f));
+    memset(in, 0, sizeof(in));
     for (int i = 0; i <= n; i++) {
         distn[i] = INF;
         head1[i] = 0;
@@ -112,6 +116,7 @@ ll dfs(int x, int y) {
         }
     }
     in[x][y] = false;
+    f[x][y] %= mod;
     return f[x][y];
 }
 
