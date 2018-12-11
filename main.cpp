@@ -53,18 +53,24 @@ int solve(ll set) {
             break;
         }
     }
+    ll nset = set - (1LL << u);
+    ans = solve(nset) + 1;
     for (int i = u + 1; i < n; i++) if (contain(set, i)) {
         int v = i;
         double a = (point[v][1] * point[u][0] - point[u][1] * point[v][0]) / (point[v][0] * point[v][0] * point[u][0] - point[u][0] * point[u][0] * point[v][0]);
+        if (a > 0) continue;
         double b = (point[u][1] - a * point[u][0] * point[u][0]) / point[u][0];
-        ll nset = set - (1LL << u) - (1LL << v);
+        nset = set - (1LL << v);
         for (int j = i + 1; j < n; j++) if (contain(set, j)) {
             if (abs(a * point[j][0] * point[j][0] + b * point[j][0] - point[j][1]) < esp) {
                 nset = nset - (1LL << j);
             }
         }
+        int tmp = solve(nset);
+        ans = min(ans, tmp + 1);
     }
-    return 0;
+    dp[set] = ans;
+    return ans;
 }
 
 int main() {
@@ -76,7 +82,8 @@ int main() {
         for (int i = 0; i < n; i++) {
             cin >> point[i][0] >> point[i][1];
         }
-        cout << solve((1LL << n) - 1);
+        int ans = solve((1LL << n) - 1);
+        cout << ans << endl;
     }
     return 0;
 }
