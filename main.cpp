@@ -60,7 +60,7 @@ int solve(ll set) {
         double a = (point[v][1] * point[u][0] - point[u][1] * point[v][0]) / (point[v][0] * point[v][0] * point[u][0] - point[u][0] * point[u][0] * point[v][0]);
         if (a > 0) continue;
         double b = (point[u][1] - a * point[u][0] * point[u][0]) / point[u][0];
-        nset = set - (1LL << v);
+        nset = set - (1LL << u) - (1LL << v);
         for (int j = i + 1; j < n; j++) if (contain(set, j)) {
             if (abs(a * point[j][0] * point[j][0] + b * point[j][0] - point[j][1]) < esp) {
                 nset = nset - (1LL << j);
