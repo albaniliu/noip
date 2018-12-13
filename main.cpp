@@ -31,59 +31,68 @@ const int N = 2010;
 const int V = 310;
 int INF = 1000000000;
 int n, m;
-unordered_map<ll, int> dp;
-double point[20][2];
-double esp = 0.00000001;
+int poke[14];
+unordered_map<int, int> dp;
 
-bool contain(ll set, int i) {
-    return set & (1LL << i);
+bool contain(int set, int i) {
+    return (set & (1 << i)) > 0;
 }
 
-int solve(ll set) {
-    if (set == 0LL) return 0;
-    if (dp.find(set) != dp.end()) {
-        return dp[set];
+int getV(int set, int i) {
+    int res = set & (3 << (i*2));
+    return res;
+}
+
+int setV(int set, int i, int v) {
+    int res = set - getV(set, i);
+    res |= (v << (i * 2));
+    return res;
+}
+
+int solve (int set) {
+    if (set == 0) return 0;
+    if (set & (set - 1) == 0) return 1;
+    if (dp.find(set) != dp.end()) return dp[set];
+    int start = 0;
+    for (int i = 0; i <= 13; i++) if (getV(set, i) > 0) {
+        start = i;
+        break;
     }
-    if ((set & (set - 1)) == 0) return 1;
-    int ans = 100;
-    int u = 0;
-    for (int i = 0; i < n; i++) {
-        if (contain(set, i)) {
-            u = i;
-            break;
+    int num = getV(set, start);
+    int nset = setV(set, start, num - 1);
+    int ans = solve(nset);
+
+    if (num >= 2) {
+        int nset = setV(set, start, num - 2);
+        ans = min(ans, solve(nset));
+        for (int i = start + 1; i <= 13; i++) {
+            
         }
     }
-    ll nset = set - (1LL << u);
-    ans = solve(nset) + 1;
-    for (int i = u + 1; i < n; i++) if (contain(set, i)) {
-        int v = i;
-        double a = (point[v][1] * point[u][0] - point[u][1] * point[v][0]) / (point[v][0] * point[v][0] * point[u][0] - point[u][0] * point[u][0] * point[v][0]);
-        if (a > 0) continue;
-        double b = (point[u][1] - a * point[u][0] * point[u][0]) / point[u][0];
-        nset = set - (1LL << u) - (1LL << v);
-        for (int j = i + 1; j < n; j++) if (contain(set, j)) {
-            if (abs(a * point[j][0] * point[j][0] + b * point[j][0] - point[j][1]) < esp) {
-                nset = nset - (1LL << j);
-            }
-        }
-        int tmp = solve(nset);
-        ans = min(ans, tmp + 1);
-    }
-    dp[set] = ans;
-    return ans;
+    return dp[set] = ans;
 }
 
 int main() {
     //freopen("C:/Users/user/Downloads/testdata.in", "r", stdin);
-    int T;
-    cin >> T;
+    int T = read();
+    n = read();
+
     for (int t = 0; t < T; t++) {
-        cin >>n >> m;
+        dp.clear();
+        memset(poke, 0, sizeof(poke));
         for (int i = 0; i < n; i++) {
-            cin >> point[i][0] >> point[i][1];
+            int tmp = read();
+            poke[tmp] ++ ;
+            read();
         }
-        int ans = solve((1LL << n) - 1);
-        cout << ans << endl;
+        int ans = poke[0] > 0?1:0;
+        int set = 0;
+        for (int i = 1; i <= 13; i++) if (poke[i] > 0) {
+            set += poke[i] << (i * 2);
+        }
+
+        ans += solve(set);
+        printf("%d\n", ans);
     }
     return 0;
 }
