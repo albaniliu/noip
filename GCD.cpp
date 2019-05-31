@@ -1,7 +1,3 @@
-//
-// Created by Mobike on 2019/5/31.
-//
-
 
 #include <iostream>
 #include <queue>
