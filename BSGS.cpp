@@ -55,4 +55,4 @@ struct BSGS {
         }
         return -1;
     }
-}bsgs;
+};
