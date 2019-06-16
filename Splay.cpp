@@ -1,223 +1,144 @@
+
 struct SplayTree {
-	int cnt, rt;
-	int Add[N*4];
 
-	struct Node {
-		int key, cnt, size, fa, son[2];
-	}T[N*4];
+	int f[MAXN], cnt[MAXN], ch[MAXN][2], size[MAXN], key[MAXN], sz, rt;
 
-	inline void PushUp(int x) {
-		T[x].size = T[T[x].son[0]].size + T[T[x].son[1]].size + T[x].cnt;
+	void clear(int x)
+	{
+		f[x] = cnt[x] = ch[x][0] = ch[x][1] = size[x] = key[x] = 0;
 	}
 
-	inline void PushDown(int x) {
-		if (Add[x]) {
-			if (T[x].son[0]) {
-				T[T[x].son[0]].key += Add[x];
-				Add[T[x].son[0]] += Add[x];
-			}
-			if (T[x].son[1]) {
-				T[T[x].son[1]].key += Add[x];
-				Add[T[x].son[1]] += Add[x];
-			}
-			Add[x] = 0;
+	bool get(int x)
+	{
+		return ch[f[x]][1] == x;
+	}
+
+	void pushup(int x)
+	{
+		if (x)
+		{
+			size[x] = cnt[x];
+			if (ch[x][0]) size[x] += size[ch[x][0]];
+			if (ch[x][1]) size[x] += size[ch[x][1]];
 		}
 	}
 
-	inline int Newnode(int key, int fa) { //新建一个节点并返回
-		++cnt;
-		T[cnt].key = key;
-		T[cnt].cnt = T[cnt].size = 1;
-		T[cnt].fa = fa;
-		T[cnt].son[0] = T[cnt].son[1] = 0;
-		return cnt;
+	void rotate(int x)
+	{
+		int old = f[x], oldf = f[old], which = get(x);
+		ch[old][which] = ch[x][which ^ 1]; f[ch[old][which]] = old;  //这两句的意思是：
+																	 //我的儿子过继给我的爸爸；同时处理父子两个方向上的信息
+		ch[x][which ^ 1] = old; f[old] = x;
+		//我给我爸爸当爹，我爸爸管我叫爸爸
+		f[x] = oldf;//我的爷爷成了我的爸爸
+		if (oldf) ch[oldf][ch[oldf][1] == old] = x;
+		pushup(old); pushup(x);//分别维护信息 
 	}
 
-	inline void Rotate(int x, int p) { //0左旋 1右旋
-		int y = T[x].fa;
-		PushDown(y);
-		PushDown(x);
-		T[y].son[!p] = T[x].son[p];
-		T[T[x].son[p]].fa = y;
-		T[x].fa = T[y].fa;
-		if (T[x].fa)
-			T[T[x].fa].son[T[T[x].fa].son[1] == y] = x;
-		T[x].son[p] = y;
-		T[y].fa = x;
-		PushUp(y);
-		PushUp(x);
+	void splay(int x)
+	{
+		for (int fa; fa = f[x]; rotate(x))
+			if (f[fa])
+				rotate((get(x) == get(fa)) ? fa : x);//如果祖父三代连城一条线，就要从祖父哪里rotate 
+		rt = x;
 	}
 
-	void Splay(int x, int to) { //将x节点移动到To的子节点中
-		while (T[x].fa != to) {
-			if (T[T[x].fa].fa == to)
-				Rotate(x, T[T[x].fa].son[0] == x);
-			else {
-				int y = T[x].fa, z = T[y].fa;
-				int p = (T[z].son[0] == y);
-				if (T[y].son[p] == x)
-					Rotate(x, !p), Rotate(x, p); //之字旋
-				else
-					Rotate(y, p), Rotate(x, p); //一字旋
+	void insert(int x)//x为权值 
+	{
+		if (rt == 0)
+		{
+			sz++; key[sz] = x; rt = sz;
+			cnt[sz] = size[sz] = 1;
+			f[sz] = ch[sz][0] = ch[sz][1] = 0;
+			return;
+		}
+		int now = rt, fa = 0;
+		while (1)
+		{
+			if (x == key[now])//这个数在树中已经出现了 
+			{
+				cnt[now]++; pushup(now); pushup(fa); splay(now); return;
+			}
+			fa = now; now = ch[now][key[now]<x];
+			if (now == 0)
+			{
+				sz++;
+				size[sz] = cnt[sz] = 1;
+				ch[sz][0] = ch[sz][1] = 0;
+				ch[fa][x>key[fa]] = sz;//根据加入点的顺序重新标号 
+				f[sz] = fa;
+				key[sz] = x;
+				pushup(fa); splay(sz); return;
 			}
 		}
-		if (to == 0) rt = x;
 	}
 
-	int GetKth(int k) {
-		if (!rt || k > T[rt].size) return -1e9;  // 若要节点id，改为0
-		int x = rt;
-		while (x) {
-			PushDown(x);
-			if (k >= T[T[x].son[0]].size + 1 && k <= T[T[x].son[0]].size + T[x].cnt)
-				break;
-			if (k > T[T[x].son[0]].size + T[x].cnt) {
-				k -= T[T[x].son[0]].size + T[x].cnt;
-				x = T[x].son[1];
-			}
+	int rnk(int x)//查询x的排名
+	{
+		int now = rt, ans = 0;
+		while (1)
+		{
+			if (x<key[now]) now = ch[now][0];
 			else
-				x = T[x].son[0];
-		}
-		return T[x].key;   // 若要节点id，改为x
-	}
-
-	int Find(int key) { //返回值为key的节点 若无返回0 若有将其转移到根处
-		if (!rt) return 0;
-		int x = rt;
-		while (x) {
-			PushDown(x);
-			if (T[x].key == key) break;
-			x = T[x].son[key > T[x].key];
-		}
-		if (x) Splay(x, 0);
-		return x;
-	}
-
-	int Prev() { //返回根节点的前驱 非重点
-		if (!rt || !T[rt].son[0]) return 0;
-		int x = T[rt].son[0];
-		while (T[x].son[1]) {
-			PushDown(x);
-			x = T[x].son[1];
-		}
-		Splay(x, 0);
-		return x;
-	}
-
-	int Succ() { //返回根结点的后继 非重点
-		if (!rt || !T[rt].son[1]) return 0;
-		int x = T[rt].son[1];
-		while (T[x].son[0]) {
-			PushDown(x);
-			x = T[x].son[0];
-		}
-		Splay(x, 0);
-		return x;
-	}
-
-	void Insert(int key) { //插入key值
-		if (!rt)
-			rt = Newnode(key, 0);
-		else {
-			int x = rt, y = 0;
-			while (x) {
-				PushDown(x);
-				y = x;
-				if (T[x].key == key) {
-					T[x].cnt++;
-					T[x].size++;
-					break;
+			{
+				ans += size[ch[now][0]];
+				if (x == key[now])
+				{//此时x和树中的点重合，树中不允许有两个相同的点 
+					splay(now); return ans + 1;
 				}
-				T[x].size++;
-				x = T[x].son[key > T[x].key];
+				ans += cnt[now];
+				now = ch[now][1];//到达右孩子处 
 			}
-			if (!x)
-				x = T[y].son[key > T[y].key] = Newnode(key, y);
-			Splay(x, 0);
 		}
 	}
 
-	void Delete(int key) { //删除值为key的节点1个
-		int x = Find(key);
-		if (!x) return;
-		if (T[x].cnt>1) {
-			T[x].cnt--;
-			PushUp(x);
-			return;
+	int kth(int x)
+	{//查询排名为x的数 
+		int now = rt;
+		while (1)
+		{
+			if (ch[now][0] && x <= size[ch[now][0]])
+				now = ch[now][0];
+			else
+			{
+				int temp = size[ch[now][0]] + cnt[now];
+				if (x <= temp)
+					return key[now];
+				x -= temp; now = ch[now][1];
+			}
 		}
-		int y = T[x].son[0];
-		while (T[y].son[1])
-			y = T[y].son[1];
-		int z = T[x].son[1];
-		while (T[z].son[0])
-			z = T[z].son[0];
-		if (!y && !z) {
-			rt = 0;
-			return;
-		}
-		if (!y) {
-			Splay(z, 0);
-			T[z].son[0] = 0;
-			PushUp(z);
-			return;
-		}
-		if (!z) {
-			Splay(y, 0);
-			T[y].son[1] = 0;
-			PushUp(y);
-			return;
-		}
-		Splay(y, 0);
-		Splay(z, y);
-		T[z].son[0] = 0;
-		PushUp(z);
-		PushUp(y);
 	}
 
-	int GetRank(int key) { //获得值<=key的节点个数
-		if (!Find(key)) {
-			Insert(key);
-			int tmp = T[T[rt].son[0]].size;
-			Delete(key);
-			return tmp;
-		}
-		else
-			return T[T[rt].son[0]].size + T[rt].cnt;
+	int pre()//由于进行splay后，x已经到了根节点的位置 
+	{//所以只要寻找左右子树最左边（或最右边的）数 
+		int now = ch[rt][0];
+		while (ch[now][1]) now = ch[now][1];
+		return now;
 	}
 
-	void Delete(int l, int r) { //删除值在[l, r]中的所有节点 l!=r
-		if (!Find(l)) Insert(l);
-		int p = Prev();
-		if (!Find(r)) Insert(r);
-		int q = Succ();
-		if (!p && !q) {
-			rt = 0;
-			return;
-		}
-		if (!p) {
-			T[rt].son[0] = 0;
-			PushUp(rt);
-			return;
-		}
-		if (!q) {
-			Splay(p, 0);
-			T[rt].son[1] = 0;
-			PushUp(rt);
-			return;
-		}
-		Splay(p, q);
-		T[p].son[1] = 0;
-		PushUp(p);
-		PushUp(q);
+	int next()
+	{
+		int now = ch[rt][1];
+		while (ch[now][0]) now = ch[now][0];
+		return now;
 	}
 
-	int solve(int key) {
-		if (!rt) return 0;
-		int x = rt, res = 2e9;
-		while (x) {
-			res = mmin(res, abs(T[x].key - key));
-			x = T[x].son[key > T[x].key];
+	void del(int x)
+	{
+		rnk(x);
+		if (cnt[rt]>1) { cnt[rt]--; pushup(rt); return; }//有多个相同的数 
+		if (!ch[rt][0] && !ch[rt][1]) { clear(rt); rt = 0; return; }
+		if (!ch[rt][0]) {
+			int oldrt = rt; rt = ch[rt][1]; f[rt] = 0; clear(oldrt); return;
 		}
-		return res;
+		else if (!ch[rt][1]) {
+			int oldrt = rt; rt = ch[rt][0]; f[rt] = 0; clear(oldrt); return;
+		}
+		int oldrt = rt; int leftbig = pre();
+		splay(leftbig);
+		ch[rt][1] = ch[oldrt][1];
+		f[ch[oldrt][1]] = rt;
+		clear(oldrt);
+		pushup(rt);
 	}
 }spt;
